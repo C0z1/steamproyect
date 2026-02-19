@@ -2,7 +2,6 @@
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
 import os
@@ -27,8 +26,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Steam Price History API", lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 app.add_middleware(
