@@ -24,12 +24,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.getenv("STEAM_DB", "steam.db")
 _con: duckdb.DuckDBPyConnection = None
-
+DB_MEMORY_LIMIT = "64MB"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _con
-    _con = duckdb.connect(DB_PATH, read_only=True)
+    _con = duckdb.connect(DB_PATH, read_only=True, config={"memory_limit": "64MB", "threads": 1})
     yield
     _con.close()
 
