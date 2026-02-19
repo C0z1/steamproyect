@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SteamPulse — Price Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #1c2128;
+    --border:   #30363d;
+    --text:     #e6edf3;
+    --muted:    #7d8590;
+    --accent:   #58a6ff;
+    --green:    #3fb950;
+    --red:      #f85149;
+    --orange:   #d29922;
+    --grad1:    #58a6ff;
+    --grad2:    #3fb950;
+    --sidebar-w: 220px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: var(--sidebar-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .sidebar-logo {
+    padding: 24px 20px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo .logo-mark {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+  }
+  .sidebar-logo .logo-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .sidebar-section {
+    padding: 16px 12px 8px;
+  }
+  .sidebar-section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    padding: 0 8px;
+    margin-bottom: 6px;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: rgba(88,166,255,0.12); color: var(--accent); }
+  .nav-item .icon { font-size: 16px; width: 18px; text-align: center; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    margin-left: var(--sidebar-w);
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    height: 56px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 12px;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .search-wrap {
+    flex: 1;
+    max-width: 420px;
+    position: relative;
+  }
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px 8px 36px;
+    font-size: 13.5px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-icon {
+    position: absolute;
+    left: 11px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .topbar-btn {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.15s;
+  }
+  .topbar-btn:hover { color: var(--text); border-color: var(--accent); }
+
+  /* ── CONTENT ── */
+  .content {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── KPI CARDS ── */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: var(--accent); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--grad1), var(--grad2));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .kpi-card:hover::before { opacity: 1; }
+  .kpi-label { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .kpi-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 6px 0 4px;
+    line-height: 1;
+  }
+  .kpi-sub { font-size: 11.5px; color: var(--muted); }
+  .kpi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 20px;
+    margin-top: 2px;
+  }
+  .badge-green { background: rgba(63,185,80,0.15); color: var(--green); }
+  .badge-red   { background: rgba(248,81,73,0.15); color: var(--red); }
+
+  /* ── CHART PANEL ── */
+  .chart-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+  }
+  .panel-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .panel-close {
+    width: 24px; height: 24px;
+    border-radius: 6px;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .panel-close:hover { color: var(--text); border-color: var(--text); }
+
+  .filter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 22px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .filter-select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    padding: 6px 10px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  .filter-spacer { margin-left: auto; }
+
+  .chart-body {
+    padding: 20px 22px 24px;
+    position: relative;
+    min-height: 280px;
+  }
+
+  /* ── BOTTOM GRID ── */
+  .bottom-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  /* ── TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .data-table th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+  }
+  .data-table td {
+    padding: 11px 16px;
+    border-bottom: 1px solid rgba(48,54,61,0.5);
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .price-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11.5px;
+    font-weight: 700;
+  }
+  .pill-green { background: rgba(63,185,80,0.18); color: var(--green); }
+  .pill-red   { background: rgba(248,81,73,0.18); color: var(--red); }
+  .pill-blue  { background: rgba(88,166,255,0.18); color: var(--accent); }
+
+  .date-main  { font-size: 13px; color: var(--text); }
+  .date-sub   { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  /* ── DONUT PANEL ── */
+  .donut-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    gap: 32px;
+  }
+  .donut-canvas-wrap { position: relative; width: 160px; height: 160px; }
+  .donut-center {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+  }
+  .donut-center-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .donut-center-lbl { font-size: 10px; color: var(--muted); }
+  .donut-legend { display: flex; flex-direction: column; gap: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 10px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .legend-text .lbl { font-size: 12.5px; color: var(--text); }
+  .legend-text .val { font-size: 11px; color: var(--muted); }
+
+  /* ── GAME SELECTOR ── */
+  .game-selector-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 22px 0 0;
+  }
+  .game-selector-label { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+
+  /* ── LOADING ── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--muted);
+    font-size: 13px;
+    gap: 10px;
+  }
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── STATUS BADGE ── */
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">SteamPulse</div>
+    <div class="logo-sub">Price Analytics</div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Main</div>
+    <div class="nav-item active" onclick="setView('trends')">
+      <span class="icon">📈</span> Price Trends
+    </div>
+    <div class="nav-item" onclick="setView('discounts')">
+      <span class="icon">🏷️</span> Top Discounts
+    </div>
+    <div class="nav-item" onclick="setView('compare')">
+      <span class="icon">⚖️</span> Compare Games
+    </div>
+    <div class="nav-item" onclick="setView('history')">
+      <span class="icon">🗂️</span> History Log
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-section-label">Data</div>
+    <div class="nav-item" onclick="setView('games')">
+      <span class="icon">🎮</span> All Games
+    </div>
+    <div class="nav-item" onclick="setView('summary')">
+      <span class="icon">📊</span> DB Summary
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px">
+      <div class="status-dot"></div>
+      <span>API connected</span>
+    </div>
+    Steam · ITAD · DuckDB
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search game by name or appid..." oninput="onSearch(this.value)">
+    </div>
+    <div id="searchResults" style="position:absolute;top:52px;left:24px;width:380px;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:200;display:none;max-height:260px;overflow-y:auto;"></div>
+    <div class="topbar-right">
+      <div class="topbar-btn" title="Refresh data" onclick="loadAll()">↻</div>
+      <div class="topbar-btn" title="Settings">⚙</div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- KPI ROW -->
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Games</div>
+        <div class="kpi-value" id="kpiGames">—</div>
+        <div class="kpi-sub">tracked in database</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Price Records</div>
+        <div class="kpi-value" id="kpiRecords">—</div>
+        <div class="kpi-sub">historical data points</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avg. Price (USD)</div>
+        <div class="kpi-value" id="kpiAvg">—</div>
+        <div class="kpi-sub">across all games</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Year Range</div>
+        <div class="kpi-value" id="kpiYears">—</div>
+        <div class="kpi-sub">of price history</div>
+      </div>
+    </div>
+
+    <!-- MAIN CHART -->
+    <div class="chart-panel">
+      <div class="panel-header">
+        <div class="panel-title">💹 Price History</div>
+        <div class="game-selector-wrap">
+          <span class="game-selector-label">Game:</span>
+          <select class="filter-select" id="gameSelect" onchange="loadGameHistory()">
+            <option value="">Loading...</option>
+          </select>
+        </div>
+        <button class="panel-close">−</button>
+      </div>
+      <div class="filter-row">
+        <select class="filter-select" id="yearFilter" onchange="loadGameHistory()">
+          <option value="">All years</option>
+        </select>
+        <div class="filter-btn active" onclick="setChartType('area',this)">Area</div>
+        <div class="filter-btn" onclick="setChartType('line',this)">Line</div>
+        <div class="filter-btn" onclick="setChartType('bar',this)">Bar</div>
+        <div class="filter-spacer"></div>
+        <div id="gameAvgBadge" style="font-size:12px;color:var(--muted)"></div>
+      </div>
+      <div class="chart-body">
+        <div id="chartLoading" class="loading"><div class="spinner"></div> Loading data...</div>
+        <canvas id="mainChart" style="display:none"></canvas>
+      </div>
+    </div>
+
+    <!-- BOTTOM GRID -->
+    <div class="bottom-grid">
+
+      <!-- RECENT CHANGES TABLE -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">🕐 Recent Price Changes</div>
+          <button class="panel-close">−</button>
+        </div>
+        <div id="recentTableWrap">
+          <div class="loading" style="height:160px"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+      <!-- DISTRIBUTION DONUT -->
+      <div class="chart-panel">
+        <div class="panel-header">
+          <div class="panel-title">🎯 Price Distribution</div>
+          <button class="panel-close">−</button>
+        </div>
+        <div id="donutWrap" class="donut-wrap">
+          <div class="loading" style="height:160px"><div class="spinner"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────────
+const API = "https://steamproyect.onrender.com";  // cambia a tu URL de producción
+
+let mainChart = null;
+let donutChart = null;
+let chartType = "area";
+let allGames = [];
+let searchDebounce = null;
+
+// ── INIT ────────────────────────────────────────────────────
+async function loadAll() {
+  await Promise.all([loadSummary(), loadGames(), loadYears()]);
+}
+
+async function loadSummary() {
+  try {
+    const d = await get("/summary");
+    document.getElementById("kpiGames").textContent   = fmt(d.total_games);
+    document.getElementById("kpiRecords").textContent = fmtK(d.total_records);
+    document.getElementById("kpiAvg").textContent     = "$" + (d.global_avg_price||0).toFixed(2);
+    document.getElementById("kpiYears").textContent   = `${d.year_from}–${d.year_to}`;
+  } catch(e) {
+    setKpiError();
+  }
+}
+
+async function loadGames() {
+  try {
+    allGames = await get("/games?limit=500");
+    const sel = document.getElementById("gameSelect");
+    sel.innerHTML = allGames.map(g =>
+      `<option value="${g.appid}">${g.appid} — ${g.total_records} pts</option>`
+    ).join("");
+    loadGameHistory();
+    loadRecentTable();
+    loadDonut();
+  } catch(e) {
+    document.getElementById("gameSelect").innerHTML = '<option value="">API offline</option>';
+    showOfflineDemo();
+  }
+}
+
+async function loadYears() {
+  try {
+    const years = await get("/years");
+    const sel = document.getElementById("yearFilter");
+    sel.innerHTML = '<option value="">All years</option>' +
+      years.map(y => `<option value="${y.year}">${y.year} (${y.games} games)</option>`).join("");
+  } catch(e) {}
+}
+
+// ── GAME HISTORY CHART ──────────────────────────────────────
+async function loadGameHistory() {
+  const appid = document.getElementById("gameSelect").value;
+  const year  = document.getElementById("yearFilter").value;
+  if (!appid) return;
+
+  showChartLoading(true);
+
+  try {
+    const url = year ? `/games/${appid}/history?year=${year}` : `/games/${appid}/history`;
+    const data = await get(url);
+    renderMainChart(data.history, appid);
+
+    // avg badge
+    const prices = data.history.map(r => r.price_usd).filter(Boolean);
+    if (prices.length) {
+      const avg = prices.reduce((a,b) => a+b, 0) / prices.length;
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      document.getElementById("gameAvgBadge").innerHTML =
+        `<span style="color:var(--muted)">min</span> <b style="color:var(--green)">$${min.toFixed(2)}</b> &nbsp;
+         <span style="color:var(--muted)">avg</span> <b style="color:var(--accent)">$${avg.toFixed(2)}</b> &nbsp;
+         <span style="color:var(--muted)">max</span> <b style="color:var(--red)">$${max.toFixed(2)}</b>`;
+    }
+  } catch(e) {
+    showChartLoading(false);
+  }
+}
+
+function renderMainChart(history, appid) {
+  showChartLoading(false);
+  const canvas = document.getElementById("mainChart");
+
+  const labels = history.map(r => r.timestamp.slice(0,10));
+  const prices = history.map(r => r.price_usd);
+
+  if (mainChart) mainChart.destroy();
+
+  const ctx = canvas.getContext("2d");
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, 260);
+  grad.addColorStop(0,   "rgba(88,166,255,0.35)");
+  grad.addColorStop(0.5, "rgba(63,185,80,0.15)");
+  grad.addColorStop(1,   "rgba(88,166,255,0.01)");
+
+  const isArea = chartType === "area";
+  const isBar  = chartType === "bar";
+
+  mainChart = new Chart(ctx, {
+    type: isBar ? "bar" : "line",
+    data: {
+      labels,
+      datasets: [{
+        label: `AppID ${appid} — Price (USD)`,
+        data: prices,
+        borderColor: "#58a6ff",
+        borderWidth: isBar ? 0 : 2,
+        backgroundColor: isBar ? "rgba(88,166,255,0.5)" : (isArea ? grad : "transparent"),
+        fill: isArea,
+        tension: 0.4,
+        pointRadius: prices.length < 30 ? 4 : 1,
+        pointBackgroundColor: "#58a6ff",
+        pointBorderColor: "#0d1117",
+        pointBorderWidth: 2,
+        pointHoverRadius: 7,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: "#1c2128",
+          borderColor: "#30363d",
+          borderWidth: 1,
+          titleColor: "#7d8590",
+          bodyColor: "#e6edf3",
+          padding: 12,
+          callbacks: {
+            label: ctx => ` $${ctx.parsed.y?.toFixed(2) ?? "—"} USD`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: "#7d8590", font: { size: 11 }, maxTicksLimit: 8 },
+          grid: { color: "rgba(48,54,61,0.5)" }
+        },
+        y: {
+          ticks: {
+            color: "#7d8590",
+            font: { size: 11 },
+            callback: v => "$" + v.toFixed(2)
+          },
+          grid: { color: "rgba(48,54,61,0.5)" }
+        }
+      }
+    }
+  });
+}
+
+// ── RECENT TABLE ─────────────────────────────────────────────
+async function loadRecentTable() {
+  try {
+    const appid = document.getElementById("gameSelect").value || (allGames[0]?.appid);
+    if (!appid) return;
+    const data = await get(`/games/${appid}/history`);
+    const recent = data.history.slice(-8).reverse();
+
+    document.getElementById("recentTableWrap").innerHTML = `
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Shop</th>
+            <th>Price</th>
+            <th>Discount</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${recent.map(r => {
+            const d = new Date(r.timestamp);
+            const day = d.toLocaleDateString("en-US",{weekday:"short"});
+            const date = d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+            const isDiscount = r.cut_pct > 0;
+            return `
+              <tr>
+                <td>
+                  <div class="date-main">${date}</div>
+                  <div class="date-sub">${day}</div>
+                </td>
+                <td style="color:var(--muted);font-size:12px">${r.shop_name || "Steam"}</td>
+                <td>
+                  <span class="price-pill ${isDiscount ? 'pill-green' : 'pill-blue'}">
+                    $${(r.price_usd||0).toFixed(2)}
+                  </span>
+                </td>
+                <td>
+                  ${isDiscount
+                    ? `<span class="price-pill pill-green">−${r.cut_pct}%</span>`
+                    : `<span style="color:var(--muted);font-size:12px">—</span>`}
+                </td>
+              </tr>`;
+          }).join("")}
+        </tbody>
+      </table>`;
+  } catch(e) {
+    document.getElementById("recentTableWrap").innerHTML =
+      '<div class="loading" style="height:120px">No data</div>';
+  }
+}
+
+// ── DONUT ─────────────────────────────────────────────────────
+async function loadDonut() {
+  try {
+    const top = await get("/top-discounts?limit=5");
+    const labels = top.map(g => `ID ${g.appid}`);
+    const vals   = top.map(g => g.max_discount);
+    const colors = ["#58a6ff","#3fb950","#d29922","#f85149","#bc8cff"];
+
+    const avgDiscount = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(0) : 0;
+
+    document.getElementById("donutWrap").innerHTML = `
+      <div class="donut-canvas-wrap">
+        <canvas id="donutCanvas"></canvas>
+        <div class="donut-center">
+          <div class="donut-center-val">${avgDiscount}%</div>
+          <div class="donut-center-lbl">avg discount</div>
+        </div>
+      </div>
+      <div class="donut-legend">
+        ${top.map((g,i) => `
+          <div class="legend-item">
+            <div class="legend-dot" style="background:${colors[i]}"></div>
+            <div class="legend-text">
+              <div class="lbl">AppID ${g.appid}</div>
+              <div class="val">Max −${g.max_discount}% · min $${(g.min_price||0).toFixed(2)}</div>
+            </div>
+          </div>`).join("")}
+      </div>`;
+
+    if (donutChart) donutChart.destroy();
+    donutChart = new Chart(document.getElementById("donutCanvas"), {
+      type: "doughnut",
+      data: {
+        labels,
+        datasets: [{
+          data: vals,
+          backgroundColor: colors,
+          borderColor: "#161b22",
+          borderWidth: 3,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        cutout: "72%",
+        plugins: { legend: { display: false }, tooltip: {
+          backgroundColor: "#1c2128",
+          borderColor: "#30363d",
+          borderWidth: 1,
+          callbacks: { label: c => ` Max discount: ${c.parsed}%` }
+        }}
+      }
+    });
+  } catch(e) {}
+}
+
+// ── SEARCH ───────────────────────────────────────────────────
+function onSearch(q) {
+  clearTimeout(searchDebounce);
+  const box = document.getElementById("searchResults");
+  if (!q.trim()) { box.style.display = "none"; return; }
+
+  searchDebounce = setTimeout(() => {
+    const matches = allGames.filter(g =>
+      String(g.appid).includes(q) ||
+      String(g.appid) === q
+    ).slice(0, 8);
+
+    if (!matches.length) { box.style.display = "none"; return; }
+
+    box.innerHTML = matches.map(g => `
+      <div onclick="selectGame(${g.appid})" style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;transition:background 0.1s"
+           onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background=''">
+        <span style="color:var(--accent);font-family:'Space Mono',monospace;font-size:12px">${g.appid}</span>
+        <span style="color:var(--muted);margin-left:8px;font-size:11px">${g.total_records} records · avg $${(g.avg_price||0).toFixed(2)}</span>
+      </div>`).join("");
+    box.style.display = "block";
+  }, 250);
+}
+
+function selectGame(appid) {
+  document.getElementById("gameSelect").value = appid;
+  document.getElementById("searchResults").style.display = "none";
+  document.getElementById("searchInput").value = appid;
+  loadGameHistory();
+  loadRecentTable();
+}
+
+// ── HELPERS ──────────────────────────────────────────────────
+async function get(path) {
+  const r = await fetch(API + path);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+function fmt(n)  { return n != null ? Number(n).toLocaleString() : "—"; }
+function fmtK(n) {
+  if (n == null) return "—";
+  return n >= 1000 ? (n/1000).toFixed(1) + "K" : n;
+}
+
+function showChartLoading(show) {
+  document.getElementById("chartLoading").style.display = show ? "flex" : "none";
+  document.getElementById("mainChart").style.display    = show ? "none" : "block";
+}
+
+function setChartType(type, btn) {
+  chartType = type;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  loadGameHistory();
+}
+
+function setView(v) {
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  event.currentTarget.classList.add("active");
+}
+
+function setKpiError() {
+  ["kpiGames","kpiRecords","kpiAvg","kpiYears"].forEach(id => {
+    document.getElementById(id).textContent = "—";
+  });
+}
+
+function showOfflineDemo() {
+  // Demo data cuando la API no está disponible
+  document.getElementById("kpiGames").textContent   = "300";
+  document.getElementById("kpiRecords").textContent = "1.2K";
+  document.getElementById("kpiAvg").textContent     = "$18.50";
+  document.getElementById("kpiYears").textContent   = "2022–2025";
+
+  const demoHistory = Array.from({length: 24}, (_, i) => {
+    const d = new Date(2022 + Math.floor(i/8), (i*1.5)%12, 1);
+    return {
+      timestamp: d.toISOString(),
+      price_usd: 10 + Math.random() * 30,
+      cut_pct: Math.random() > 0.6 ? Math.floor(Math.random()*70) : 0,
+      shop_name: "Steam"
+    };
+  });
+
+  renderMainChart(demoHistory, "DEMO");
+
+  document.getElementById("recentTableWrap").innerHTML = `
+    <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">
+      ⚠️ API offline — showing demo data<br>
+      <small>Run: <code style="background:var(--surface2);padding:2px 6px;border-radius:4px">uvicorn api:app --reload</code></small>
+    </div>`;
+
+  document.getElementById("donutWrap").innerHTML = `
+    <div style="padding:20px;text-align:center;color:var(--muted);font-size:13px">
+      Start the API to see live data
+    </div>`;
+
+  document.querySelector(".sidebar-footer").innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-bottom:4px">
+      <div style="width:7px;height:7px;border-radius:50%;background:var(--red)"></div>
+      <span style="color:var(--red)">API offline</span>
+    </div>
+    Demo mode active`;
+}
+
+// Close search on outside click
+document.addEventListener("click", e => {
+  if (!e.target.closest(".search-wrap") && !e.target.closest("#searchResults")) {
+    document.getElementById("searchResults").style.display = "none";
+  }
+});
+
+// ── START ────────────────────────────────────────────────────
+loadAll();
+</script>
+</body>
+</html>
