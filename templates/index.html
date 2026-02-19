@@ -356,6 +356,7 @@ async function loadYears() {
 function onGameChange() {
   showPredict = false;
   document.getElementById("predictBtn").className = "filter-btn";
+  console.log("predict btn reset");
   document.getElementById("predictBtn").style.borderColor = "var(--purple)";
   document.getElementById("predictBtn").style.color = "var(--purple)";
   document.getElementById("predictInfo").style.display = "none";
