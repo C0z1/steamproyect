@@ -25,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 DB_PATH = os.getenv("STEAM_DB", "steam.db")
 _con: duckdb.DuckDBPyConnection = None
 DB_MEMORY_LIMIT = "64MB"
+allow_origins=["*"],
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,10 +40,10 @@ app = FastAPI(title="Steam Price History API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_credentials=False,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 def db():
     return _con
