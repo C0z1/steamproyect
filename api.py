@@ -147,3 +147,7 @@ def top_discounts(limit: int = 10):
         LIMIT {limit}
     """).fetchdf()
     return rows.to_dict(orient="records")
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
