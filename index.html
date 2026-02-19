@@ -878,7 +878,7 @@ async function get(path, retries = 6, delay = 5000) {
       throw new Error(r.status);
     } catch (e) {
       if (i === retries - 1) throw e;
-      console.log(`API no responde, reintentando en ${delay/1000}s... (${i+1}/${retries})`);
+      console.log(`Reintentando en ${delay/1000}s... (${i+1}/${retries})`);
       await new Promise(r => setTimeout(r, delay));
     }
   }
