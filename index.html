@@ -610,6 +610,11 @@ async function loadGames() {
     sel.innerHTML = allGames.map(g =>
       `<option value="${g.appid}">${g.appid} — ${g.total_records} pts</option>`
     ).join("");
+
+    // ← AGREGA ESTA LÍNEA:
+    const firstGame = allGames.find(g => g.total_records > 0);
+    if (firstGame) document.getElementById("gameSelect").value = firstGame.appid;
+
     loadGameHistory();
     loadRecentTable();
     loadDonut();
