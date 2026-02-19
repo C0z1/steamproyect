@@ -92,7 +92,9 @@ def db():
 # ── GET / ────────────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "SteamPulse API"}
+    import glob
+    files = glob.glob("histograms/**/*.parquet", recursive=True)
+    return {"status": "ok", "parquets_found": len(files), "cwd": os.getcwd()}
 
 
 # ── GET /health ──────────────────────────────────────────────
