@@ -444,26 +444,26 @@
   <div class="sidebar-section">
     <div class="sidebar-section-label">Main</div>
     <div class="nav-item active" onclick="setView('trends')">
-      <span class="icon">📈</span> Price Trends
+      <span class="icon">↗</span> Price Trends
     </div>
     <div class="nav-item" onclick="setView('discounts')">
-      <span class="icon">🏷️</span> Top Discounts
+      <span class="icon">%</span> Top Discounts
     </div>
     <div class="nav-item" onclick="setView('compare')">
-      <span class="icon">⚖️</span> Compare Games
+      <span class="icon">=</span> Compare Games
     </div>
     <div class="nav-item" onclick="setView('history')">
-      <span class="icon">🗂️</span> History Log
+      <span class="icon">≡</span> History Log
     </div>
   </div>
 
   <div class="sidebar-section">
     <div class="sidebar-section-label">Data</div>
     <div class="nav-item" onclick="setView('games')">
-      <span class="icon">🎮</span> All Games
+      <span class="icon">▶</span> All Games
     </div>
     <div class="nav-item" onclick="setView('summary')">
-      <span class="icon">📊</span> DB Summary
+      <span class="icon">◉</span> DB Summary
     </div>
   </div>
 
@@ -522,7 +522,7 @@
     <!-- MAIN CHART -->
     <div class="chart-panel">
       <div class="panel-header">
-        <div class="panel-title">💹 Price History</div>
+        <div class="panel-title"> Price History</div>
         <div class="game-selector-wrap">
           <span class="game-selector-label">Game:</span>
           <select class="filter-select" id="gameSelect" onchange="loadGameHistory()">
@@ -553,7 +553,7 @@
       <!-- RECENT CHANGES TABLE -->
       <div class="chart-panel">
         <div class="panel-header">
-          <div class="panel-title">🕐 Recent Price Changes</div>
+          <div class="panel-title"> Recent Price Changes</div>
           <button class="panel-close">−</button>
         </div>
         <div id="recentTableWrap">
@@ -564,7 +564,7 @@
       <!-- DISTRIBUTION DONUT -->
       <div class="chart-panel">
         <div class="panel-header">
-          <div class="panel-title">🎯 Price Distribution</div>
+          <div class="panel-title"> Price Distribution</div>
           <button class="panel-close">−</button>
         </div>
         <div id="donutWrap" class="donut-wrap">
@@ -611,7 +611,6 @@ async function loadGames() {
       `<option value="${g.appid}">${g.appid} — ${g.total_records} pts</option>`
     ).join("");
 
-    // ← AGREGA ESTA LÍNEA:
     const firstGame = allGames.find(g => g.total_records > 0);
     if (firstGame) document.getElementById("gameSelect").value = firstGame.appid;
 
