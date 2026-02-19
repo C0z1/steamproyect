@@ -25,7 +25,6 @@ from fastapi.middleware.cors import CORSMiddleware
 DB_PATH = os.getenv("STEAM_DB", "steam.db")
 _con: duckdb.DuckDBPyConnection = None
 DB_MEMORY_LIMIT = "64MB"
-allow_origins=["*"],
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
