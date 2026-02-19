@@ -1,18 +1,9 @@
-"""
-api.py
-======
-Backend FastAPI que sirve el historial de precios desde DuckDB.
 
-Uso:
-  pip install fastapi uvicorn duckdb
-  uvicorn api:app --reload
-
-Endpoints:
-  GET /games              → lista todos los juegos con estadísticas
-  GET /games/{appid}      → estadísticas de un juego
-  GET /games/{appid}/history  → historial de precios
-  GET /search?q=...       → buscar juegos por nombre (requiere steamspy cache)
-"""
+from fastapi import Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 
 import os
 from contextlib import asynccontextmanager
@@ -24,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 DB_PATH = os.getenv("STEAM_DB", "steam.db")
 _con: duckdb.DuckDBPyConnection = None
-DB_MEMORY_LIMIT = "64MB"
+DB_MEMORY_LIMIT = "32MB"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -35,6 +26,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Steam Price History API", lifespan=lifespan)
+templates = Jinja2Templates(directory="templates")
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,7 +45,7 @@ def db():
 
 # ── GET /games ──────────────────────────────────────────────
 @app.get("/games")
-def list_games(limit: int = Query(100, le=500), offset: int = 0):
+def list_games(limit: int = Query(50, le=100), offset: int = 0):
     rows = db().execute(f"""
         SELECT appid, total_records, first_seen, last_seen,
                min_price, max_price, avg_price, max_discount
@@ -147,10 +142,19 @@ def top_discounts(limit: int = 10):
     """).fetchdf()
     return rows.to_dict(orient="records")
 
-@app.get("/")
-def root():
-    return {"status": "ok"}
+@app.get("/", response_class=HTMLResponse)
+def dashboard(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request}
+    )
